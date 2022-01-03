@@ -18,6 +18,7 @@
 
 package com.github.kayak.canio.kcd.loader;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.kayak.canio.kcd.Label;
 import com.github.kayak.canio.kcd.Message;
@@ -47,6 +48,7 @@ public class KCDLoader implements DescriptionLoader {
     ObjectMapper objectMapper = new ObjectMapper();
 
     public KCDLoader() {
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public Document parse(InputStream is) {
