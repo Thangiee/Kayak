@@ -18,6 +18,7 @@
 
 package com.github.kayak.canio.kcd.loader;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.kayak.canio.kcd.BasicLabelType;
 import com.github.kayak.canio.kcd.Bus;
 import com.github.kayak.canio.kcd.Consumer;
@@ -59,7 +60,6 @@ import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 
-import org.apache.xerces.jaxp.validation.XMLSchemaFactory;
 import org.openide.util.lookup.ServiceProvider;
 import org.xml.sax.SAXException;
 
@@ -73,38 +73,16 @@ public class KCDLoader implements DescriptionLoader {
     private static final Logger logger = Logger.getLogger(KCDLoader.class.getCanonicalName());
     Schema schema;
     JAXBContext context;
+    ObjectMapper objectMapper = new ObjectMapper();
 
     public KCDLoader() {
-//        SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        SchemaFactory schemaFactory = new XMLSchemaFactory();
-        InputStream resourceAsStream = KCDLoader.class.getResourceAsStream("Definition.xsd");
-        Source s = new StreamSource(resourceAsStream);
-        try {
-        schema = schemaFactory.newSchema(s);
-        } catch(SAXException ex) {
-            logger.log(Level.SEVERE, "Could not load schema: ", ex);
-        }
-        try {
-            context = JAXBContext.newInstance(new Class[]{com.github.kayak.canio.kcd.NetworkDefinition.class});
-        } catch(JAXBException ex) {
-            logger.log(Level.SEVERE, "Could not create JAXB context: ", ex);
-        }
     }
 
     public Document parse(InputStream is) {
-        NetworkDefinition netdef = null;
+        NetworkDefinition netdef;
 
         try {
-            context = JAXBContext.newInstance(new Class[]{com.github.kayak.canio.kcd.NetworkDefinition.class});
-            Unmarshaller umarshall = context.createUnmarshaller();
-            umarshall.setSchema(schema);
-
-            Object object = umarshall.unmarshal(is);
-
-            if (object.getClass() == NetworkDefinition.class) {
-                netdef = (NetworkDefinition) object;
-            }
-
+            netdef = objectMapper.readValue(is, com.github.kayak.canio.kcd.NetworkDefinition.class);
         } catch (Exception e) {
             logger.log(Level.WARNING, "Could not load kcd file !", e);
             return null;
@@ -234,33 +212,12 @@ public class KCDLoader implements DescriptionLoader {
 
     @Override
     public Document parseFile(File file) {
-        NetworkDefinition netdef = null;
+        NetworkDefinition netdef;
 
         try {
-            context = JAXBContext.newInstance(new Class[]{com.github.kayak.canio.kcd.NetworkDefinition.class});
-            Unmarshaller umarshall = context.createUnmarshaller();
-            umarshall.setSchema(schema);
-
-            Object object;
-
-            if(file.getName().endsWith(".kcd.gz")) {
-                GZIPInputStream zipstream = new GZIPInputStream(new FileInputStream(file));
-                object = umarshall.unmarshal(zipstream);
-            } else if(file.getName().endsWith(".kcd")) {
-                object = umarshall.unmarshal(file);
-            } else {
-                return null;
-            }
-
-            if (object.getClass() == NetworkDefinition.class) {
-                netdef = (NetworkDefinition) object;
-            }
-
-        } catch(UnmarshalException e) {
-            logger.log(Level.WARNING, "Found invalid file: " + file.getAbsolutePath() + "!", e);
-            return null;
+            netdef = objectMapper.readValue(file, com.github.kayak.canio.kcd.NetworkDefinition.class);
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Could not load kcd file " + file.getAbsolutePath() + "!", e);
+            logger.log(Level.WARNING, "Could not load kcd file !", e);
             return null;
         }
 
