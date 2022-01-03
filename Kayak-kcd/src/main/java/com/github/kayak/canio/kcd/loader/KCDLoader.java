@@ -88,6 +88,147 @@ public class KCDLoader implements DescriptionLoader {
         }
     }
 
+    public Document parse(InputStream is) {
+        NetworkDefinition netdef = null;
+
+        try {
+            context = JAXBContext.newInstance(new Class[]{com.github.kayak.canio.kcd.NetworkDefinition.class});
+            Unmarshaller umarshall = context.createUnmarshaller();
+            umarshall.setSchema(schema);
+
+            Object object = umarshall.unmarshal(is);
+
+            if (object.getClass() == NetworkDefinition.class) {
+                netdef = (NetworkDefinition) object;
+            }
+
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Could not load kcd file !", e);
+            return null;
+        }
+
+        Document doc = new Document();
+
+        com.github.kayak.canio.kcd.Document documentInfo = netdef.getDocument();
+        doc.setVersion(documentInfo.getVersion());
+        doc.setAuthor(documentInfo.getAuthor());
+        doc.setCompany(documentInfo.getCompany());
+        doc.setDate(documentInfo.getDate());
+        doc.setName(documentInfo.getName());
+//        doc.setFileName(file.getAbsolutePath());
+
+
+        for(Node n : netdef.getNode()) {
+            com.github.kayak.core.description.Node node = doc.createNode(n.getId(), n.getName());
+        }
+
+        for(Bus b : netdef.getBus()) {
+            BusDescription description = doc.createBusDescription();
+            description.setName(b.getName());
+            description.setBaudrate(b.getBaudrate());
+
+            /* Messages for each bus */
+            for(Message m :  b.getMessage()) {
+                MessageDescription messageDescription;
+
+                if(m.getFormat().equals("extended"))
+                    messageDescription = new MessageDescription(Integer.parseInt(m.getId().substring(2),16), true);
+                else
+                    messageDescription = new MessageDescription(Integer.parseInt(m.getId().substring(2),16), false);
+
+                messageDescription.setInterval(m.getInterval());
+                messageDescription.setName(m.getName());
+
+                /* set producer */
+                Producer producer = m.getProducer();
+                if(producer != null) {
+                    List<NodeRef> ref = producer.getNodeRef();
+                    if(ref.size() > 1) {
+
+                    } else if (ref.size() == 1) {
+                        String id = ref.get(0).getId();
+                        com.github.kayak.core.description.Node n = doc.getNodeWithID(id);
+                        if(n != null)
+                            messageDescription.setProducer(n);
+                    }
+                }
+
+                for(Multiplex multiplex : m.getMultiplex()) {
+                    MultiplexDescription multiplexDescription = messageDescription.createMultiplexDescription();
+
+                    /* Set multiplex values */
+                    if(multiplex.getEndianess().equals("big")) {
+                        multiplexDescription.setByteOrder(ByteOrder.BIG_ENDIAN);
+                    } else {
+                        multiplexDescription.setByteOrder(ByteOrder.LITTLE_ENDIAN);
+                    }
+                    multiplexDescription.setLength(multiplex.getLength());
+                    multiplexDescription.setOffset(multiplex.getOffset());
+                    multiplexDescription.setName(multiplex.getName());
+
+                    if(multiplex.getValue() != null) {
+                        String typeString = multiplex.getValue().getType();
+                        if (typeString.equals("signed")) {
+                            multiplexDescription.setType(SignalDescription.Type.SIGNED);
+                        } else if (typeString.equals("double")) {
+                            multiplexDescription.setType(SignalDescription.Type.DOUBLE);
+                        } else if (typeString.equals("float")) {
+                            multiplexDescription.setType(SignalDescription.Type.SINGLE);
+                        } else {
+                            multiplexDescription.setType(SignalDescription.Type.UNSIGNED);
+                        }
+                    }
+
+                    /* Transform MuxGroups to Signal lists */
+                    for(MuxGroup group : multiplex.getMuxGroup()) {
+                        long value = (long) group.getCount();
+
+                        for(Signal s : group.getSignal()) {
+                            SignalDescription signalDescription = multiplexDescription.createMultiplexedSignal(value);
+                            signalToSignalDescription(s, signalDescription);
+
+                            /* set consumers */
+                            Consumer c = s.getConsumer();
+                            if(c != null && c.getNodeRef() != null) {
+                                List<NodeRef> signalRef = c.getNodeRef();
+                                HashSet<com.github.kayak.core.description.Node> consumers = new HashSet<com.github.kayak.core.description.Node>();
+
+                                for(NodeRef nr : signalRef) {
+                                    com.github.kayak.core.description.Node n = doc.getNodeWithID(nr.getId());
+                                    if(n != null)
+                                        consumers.add(n);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for(Signal s : m.getSignal()) {
+                    SignalDescription signalDescription = messageDescription.createSignalDescription();
+                    signalToSignalDescription(s, signalDescription);
+
+
+                    /* set consumers */
+                    Consumer c = s.getConsumer();
+                    if(c != null && c.getNodeRef() != null) {
+                        List<NodeRef> signalRef = c.getNodeRef();
+                        HashSet<com.github.kayak.core.description.Node> consumers = new HashSet<com.github.kayak.core.description.Node>();
+
+                        for(NodeRef nr : signalRef) {
+                            com.github.kayak.core.description.Node n = doc.getNodeWithID(nr.getId());
+                            if(n != null)
+                                consumers.add(n);
+                        }
+                    }
+
+                }
+                description.addMessageDescription(messageDescription);
+            }
+        }
+
+        return doc;
+    }
+
     @Override
     public Document parseFile(File file) {
         NetworkDefinition netdef = null;
