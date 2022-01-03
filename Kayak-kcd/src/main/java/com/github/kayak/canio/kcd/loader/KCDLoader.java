@@ -19,49 +19,22 @@
 package com.github.kayak.canio.kcd.loader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.kayak.canio.kcd.BasicLabelType;
-import com.github.kayak.canio.kcd.Bus;
-import com.github.kayak.canio.kcd.Consumer;
 import com.github.kayak.canio.kcd.Label;
-import com.github.kayak.canio.kcd.LabelGroup;
-import com.github.kayak.canio.kcd.LabelSet;
 import com.github.kayak.canio.kcd.Message;
-import com.github.kayak.canio.kcd.Multiplex;
-import com.github.kayak.canio.kcd.MuxGroup;
-import com.github.kayak.canio.kcd.NetworkDefinition;
 import com.github.kayak.canio.kcd.Node;
-import com.github.kayak.canio.kcd.NodeRef;
-import com.github.kayak.canio.kcd.Producer;
 import com.github.kayak.canio.kcd.Signal;
-import com.github.kayak.canio.kcd.Value;
-import com.github.kayak.core.description.BusDescription;
-import com.github.kayak.core.description.DescriptionLoader;
+import com.github.kayak.canio.kcd.*;
 import com.github.kayak.core.description.Document;
-import com.github.kayak.core.description.MessageDescription;
-import com.github.kayak.core.description.MultiplexDescription;
-import com.github.kayak.core.description.SignalDescription;
+import com.github.kayak.core.description.*;
+import org.openide.util.lookup.ServiceProvider;
+
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.ByteOrder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.GZIPInputStream;
-import javax.xml.XMLConstants;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.UnmarshalException;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.transform.Source;
-import javax.xml.transform.stream.StreamSource;
-import javax.xml.validation.Schema;
-import javax.xml.validation.SchemaFactory;
-
-import org.openide.util.lookup.ServiceProvider;
-import org.xml.sax.SAXException;
 
 /**
  *
@@ -71,8 +44,6 @@ import org.xml.sax.SAXException;
 public class KCDLoader implements DescriptionLoader {
 
     private static final Logger logger = Logger.getLogger(KCDLoader.class.getCanonicalName());
-    Schema schema;
-    JAXBContext context;
     ObjectMapper objectMapper = new ObjectMapper();
 
     public KCDLoader() {
