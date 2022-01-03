@@ -58,6 +58,8 @@ import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
+
+import org.apache.xerces.jaxp.validation.XMLSchemaFactory;
 import org.openide.util.lookup.ServiceProvider;
 import org.xml.sax.SAXException;
 
@@ -73,7 +75,8 @@ public class KCDLoader implements DescriptionLoader {
     JAXBContext context;
 
     public KCDLoader() {
-        SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+//        SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        SchemaFactory schemaFactory = new XMLSchemaFactory();
         InputStream resourceAsStream = KCDLoader.class.getResourceAsStream("Definition.xsd");
         Source s = new StreamSource(resourceAsStream);
         try {
